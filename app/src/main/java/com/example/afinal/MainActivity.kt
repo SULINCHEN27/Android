@@ -2,22 +2,26 @@ package com.example.afinal
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.NetworkOnMainThreadException
 import android.util.Log
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.afinal.databinding.ActivityMainBinding
+import kotlinx.coroutines.*
 import okhttp3.*
 import org.jsoup.Jsoup
 import java.io.*
-import java.net.HttpURLConnection
-import java.net.URL
+import java.lang.Exception
 import kotlin.concurrent.thread
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 open class MainActivity : AppCompatActivity() {
     private var verifyCodeUrl:String = "https://jwcjwxt1.fzu.edu.cn/plus/verifycode.asp"
+    private var postUrl:String = "https://jwcjwxt1.fzu.edu.cn/logincheck.asp"
 
 
     private var cookie01: String =""
@@ -25,150 +29,100 @@ open class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        //sendCookies(verifyCodeUrl)
 
+        //协程获取验证码
+        runBlocking {
+            getVerifyCode()
+        }
+
+
+        val job = Job()
+        val scope = CoroutineScope(job)
 
 
         binding.login.setOnClickListener {
-//            val muser :String = binding.accountEdit.text.toString()
-//            val passwd : String = binding.passwordEdit.text.toString()
-//            val verifyCode : String = binding.verityEdit.text.toString()
-//            Log.d("用户信息","muser:"+muser+" password:"+passwd+" verifyCode:"+verifyCode)
-//            postUser(muser,passwd,verifyCode)
-            val file = File("/data/data/com.example.afinal/files/table.html")
-            val doc = Jsoup.parse(file,"UTF-8")
-            val temp: String = doc.html().replace("<br>", "$$$$$")
-            val document = Jsoup.parse(temp);
-            val element = document.getElementById("ContentPlaceHolder1_LB_kb")
-            val table = element.select("tr")
-            val e = table.size
+            val muser :String = binding.accountEdit.text.toString()
+            val passwd : String = binding.passwordEdit.text.toString()
+            val verifyCode : String = binding.verityEdit.text.toString()
 
-            val courseDao = AppDatabase.getDatabase(this).courseDao()
-            for(i in 0 until e){
-                val tr = table.get(i)
-                val fonts = tr.select("td")
+            scope.launch {
 
-                var num:Int=0;
-                var day:Int=0;
-                for (j in 0 until fonts.size){
-                    val font = fonts.get(j)
+                    val response = post(muser,passwd,verifyCode,postUrl,cookie01)
+                    val data = response.toString()
+                    val data01 = data.substring(data.indexOf("url="),data.length-1)
+                    val data02 = data.substring(data.indexOf("token="),data.length-1)
 
-                    val spilt = font.text().split("$$$$$")
-
-                    if (spilt.size==2){
-                        num = spilt[0].toInt()
-                    }
-                    if(spilt.size>3||spilt.toString() ==("[]")) day++
-                    if(spilt.size==5){
-                        val splitWeek = spilt[4].split("-")
-                        val course:Course= Course(num,day,spilt[0],spilt[1],spilt[2],spilt[3],spilt[4],splitWeek[0].toInt(),splitWeek[1].toInt(),true);
-                        thread {
-                            courseDao.insertCourse(course)
-                        }
-
-
-                    }else{
-                        val course:Course = Course(num,day,"","","","","",0,0,false)
-                        thread {
-                            courseDao.insertCourse(course)
-                        }
-
-                    }
-
-                }
+                    val url = data01.replace("url=","")
+                    val str = data02.split("&").toTypedArray()
+                    SSLogin(url,str)
             }
+            job.cancel()
+
+
 
             val intent = Intent(this,MenuActivity::class.java)
             startActivity(intent)
-            finish()
+            runBlocking {
+                delay(1000)
+                finish()
+            }
+
 
         }
 
     }
 
     //第一步，获取验证码
-    private fun sendCookies(imageURL: String){
-        Log.d("sendCookies","方法正在执行")
-        thread {
-            var connection: HttpURLConnection? = null
-            try {
-                var img = imageURL
-                val url = URL(img)
-                connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 800000
-                connection.readTimeout = 800000
-                if(connection.getHeaderField("Set-Cookie")!=null){
-                    cookie01 = connection.getHeaderField("Set-Cookie")
-                    Log.d("Set-Cookie", cookie01)
-                }
 
-                val input = connection.inputStream
-                val readera : ByteArray = readStream(input)
-                val bitmap= BitmapFactory.decodeByteArray(readera, 0, readera.size);
-                showImage(bitmap)
-            } catch (e: NetworkOnMainThreadException) {
-                e.printStackTrace()
-            } finally {
-                connection?.disconnect()
-            }
+    suspend fun getVerifyCode(){
+        try {
+            val response = request(verifyCodeUrl)
+            showImage(response)
+        }catch(e: Exception){
+            Toast.makeText(this@MainActivity,"获取验证码失败",Toast.LENGTH_SHORT).show()
         }
     }
 
+    suspend fun request(verifyCodeUrl:String):Bitmap{
+        return suspendCoroutine {
+            continuation ->
+            HttpUtil.sendCookies(verifyCodeUrl, object :HttpCallbackListener{
+                override fun onFinish(response: Bitmap,cookie:String) {
+                    continuation.resume(response)
+                    cookie01 = cookie
+                }
+
+                override fun onError(e: Exception) {
+                    continuation.resumeWithException(e)
+                }
+            })
+        }
+    }
 
     private fun showImage(bitmap: Bitmap){
+        Log.d("aaa","正在执行")
         runOnUiThread {
             val verityImage = findViewById<ImageView>(R.id.verityCodeImg)
             verityImage.setImageBitmap(bitmap)
         }
     }
 
-    private fun readStream(inStream : InputStream): ByteArray {
-        val buffer  = ByteArray(2048)
-        var len :Int = -1;
-        val outStream = ByteArrayOutputStream()
-        len = inStream.read(buffer)
-        while (len  != -1) {
-            outStream.write(buffer, 0, len);
-            len = inStream.read(buffer)
-        }
-        val data : ByteArray = outStream.toByteArray();
-        outStream.close();
-        inStream.close();
-        return data;
-
-    }
 
 
     //第二步，验证提交的数据是否正确，拿到token和cookie
-    private fun postUser(username: String,password: String, text:String){
-        thread {
-            try {
-                val client = OkHttpClient()
-                val formBody = FormBody.Builder().add("muser","831903207")
-                    .add("passwd","csl20001227").add("verifyCode",text)
-                    .build()
-                val request = Request.Builder().url("https://jwcjwxt1.fzu.edu.cn/logincheck.asp")
-                    .addHeader("cookie",cookie01).post(formBody).build()
-                val response = client.newCall(request).execute()
-                val data = response.toString()
-                val data01 = data.substring(data.indexOf("url="),data.length-1)
-                val data02 = data.substring(data.indexOf("token="),data.length-1)
+    suspend fun post(username: String,password: String, text:String,postUrl: String,cookie:String):Response{
+        return suspendCoroutine {
+            continuation ->
+            OkHttpUtil.postUser(username,password, text,postUrl,cookie, object : Callback{
+                override fun onFailure(call: Call, e: IOException) {
+                    continuation.resumeWithException(e)
+                }
 
-                val url = data01.replace("url=","")
-                val str = data02.split("&").toTypedArray()
-                SSLogin(url,str)
+                override fun onResponse(call: Call, response: Response) {
+                    continuation.resume(response)
+                }
 
-            }catch (e: NetworkOnMainThreadException) {
-                e.printStackTrace()
-            } finally {
-            }
-        }
-
-    }
-
-    private fun showResponse(response: String){
-        runOnUiThread {
-            Log.d("response",response)
+            })
         }
     }
 
@@ -180,7 +134,6 @@ open class MainActivity : AppCompatActivity() {
                 val request = Request.Builder().url(url).build()
                 val response = client.newCall(request).execute()
                 val cookie02 : String? = response.header("Set-Cookie")
-                Log.d("第三步cookie",cookie02.toString())
                 if (cookie02 != null) {
                     sendSSLogin(cookie02,str)
                 }
@@ -205,14 +158,10 @@ open class MainActivity : AppCompatActivity() {
                 val response = client.newCall(request).execute()
                 val headers : Headers = response.headers
                 val cookie03 = headers.values("Set-Cookie")
-
-                Log.d("第四步cookie",cookie02+";"+cookie03[0]+";"+cookie03[1])
                 val cookie =cookie02+";"+cookie03[0]+";"+cookie03[1]
 
 
                loginchk(cookie,str)
-
-
 
             }catch (e: NetworkOnMainThreadException) {
                 e.printStackTrace()
@@ -221,6 +170,7 @@ open class MainActivity : AppCompatActivity() {
         }
     }
 
+    //第五步
     private fun loginchk(cookie : String, str: Array<String>){
         thread {
             try {
@@ -229,12 +179,6 @@ open class MainActivity : AppCompatActivity() {
                 val request = Request.Builder().addHeader("cookie", cookie).url(url).build()
                 val response = client.newCall(request).execute()
 
-
-
-
-
-//                val document = Jsoup.parse(file,"UTF-8")
-//                Log.d("document",document.text())
             }catch (e: NetworkOnMainThreadException) {
                 e.printStackTrace()
             } finally {

@@ -27,16 +27,18 @@ class DashboardFragment : Fragment() {
     val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
     val check = root.findViewById<Button>(R.id.btnText)
     check.setOnClickListener {
+
+
       val intent = Intent(activity,CourseActivity::class.java)
       startActivity(intent)
 
     }
 
-//    val add = root.findViewById<Button>(R.id.add)
-//    add.setOnClickListener {
-//      val intent = Intent(activity,AddActivity::class.java)
-//      startActivity(intent)
-//    }
+    val add = root.findViewById<Button>(R.id.add)
+    add.setOnClickListener {
+      val intent = Intent(activity,AddActivity::class.java)
+      startActivity(intent)
+    }
 
 
     return root

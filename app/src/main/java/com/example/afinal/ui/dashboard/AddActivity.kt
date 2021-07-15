@@ -1,5 +1,7 @@
 package com.example.afinal.ui.dashboard
 
+import android.app.Activity
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -107,8 +109,6 @@ class AddActivity : AppCompatActivity() {
         val courseDao = AppDatabase.getDatabase(this).courseDao()
         binding.login.setOnClickListener {
 
-
-
             val course = binding.course.text.toString()
             val room = binding.room.text.toString()
             val teacher = binding.teacher.text.toString()
@@ -116,8 +116,13 @@ class AddActivity : AppCompatActivity() {
             Log.d("button", "$course $room $teacher $num $a $day $minWeek $maxWeek")
             val addCourse = Course(a,day,course," ",room,teacher,"$minWeek - $maxWeek",minWeek,maxWeek,true)
             thread {
+                courseDao.deleteCourse(a,day)
                 courseDao.insertCourse(addCourse)
             }
+
+            val intent = Intent(this,DashboardFragment::class.java)
+            startActivity(intent)
+
 
 
         }

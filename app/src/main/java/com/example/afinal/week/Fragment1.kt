@@ -1,18 +1,14 @@
 package com.example.table.week
 
-import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import com.example.afinal.AppDatabase
-import com.example.afinal.MainActivity
 import com.example.afinal.R
 import com.example.afinal.course.CourseActivity
 import com.example.table.PageViewModel
@@ -22,10 +18,19 @@ import kotlin.concurrent.thread
 class Fragment1 : Fragment() {
 
     private lateinit var pageViewModel: PageViewModel
+    protected var isFirstLoading  = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (!isFirstLoading){
+            val courseDao = AppDatabase.getDatabase(activity as CourseActivity).courseDao()
+        }
     }
 
     override fun onCreateView(
@@ -90,4 +95,8 @@ class Fragment1 : Fragment() {
             }
         }
     }
+
+
+
+
 }

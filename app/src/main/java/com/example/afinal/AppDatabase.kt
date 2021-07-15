@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.afinal.course.CourseActivity
 import com.example.afinal.ui.dashboard.AddActivity
+import com.example.afinal.ui.dashboard.DashboardFragment
 
 @Database(version = 1,entities = [Course::class])
 abstract class AppDatabase :RoomDatabase() {
@@ -51,5 +52,7 @@ abstract class AppDatabase :RoomDatabase() {
                     instance = this
                 }
         }
+
+
     }
 }

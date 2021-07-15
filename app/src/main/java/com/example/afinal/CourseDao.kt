@@ -1,8 +1,6 @@
 package com.example.afinal
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
+import androidx.room.*
 
 @Dao
 interface CourseDao {
@@ -12,4 +10,7 @@ interface CourseDao {
 
     @Query("select * from Course where num = :num and day = :day")
     fun findCourse(num:Int, day:Int):Course
+
+    @Query("delete from Course where num = :num and day = :day")
+    fun deleteCourse(num:Int, day:Int)
 }

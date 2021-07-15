@@ -37,10 +37,8 @@ class NotificationsFragment : Fragment() {
       R.drawable.one, R.drawable.two,
       R.drawable.three, R.drawable.four
     )
-
     val imageTitle = arrayListOf<String>("one", "two", "three", "four")
     //设置内置样式
-
     banner.setBannerStyle(1)
     //设置图片加载器
     banner.setImageLoader(MyLoader())
@@ -59,27 +57,6 @@ class NotificationsFragment : Fragment() {
     banner.setOnBannerListener {
       i++;
       banner.isAutoPlay(false)
-
-//      if (i != 1) {
-//        when (it.dec()) {
-//          -1 -> {
-//            val intent = Intent(this, WechatSystem::class.java)
-//            startActivity(intent)
-//          }
-//          0 -> {
-//            val intent = Intent(this, WebDesign::class.java)
-//            startActivity(intent)
-//          }
-//          1 -> {
-//            val intent = Intent(this, AppDevelopment::class.java)
-//            startActivity(intent)
-//          }
-//          2 -> {
-//            val intent = Intent(this, SystemDevelopment::class.java)
-//            startActivity(intent)
-//          }
-//        }
-//      }
 
     }
     //必须最后调用方法，启动轮播图
